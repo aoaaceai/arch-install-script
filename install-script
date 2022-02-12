@@ -1,0 +1,39 @@
+#!/bin/bash
+ROOT_PASSWORD='a'
+HOSTNAME='arch'
+sfdisk -f /dev/sda <<< 'label: gpt
+label-id: BDA7F0E5-643E-BD42-8F29-5087D6FEEE4C
+device: /dev/sda
+unit: sectors
+first-lba: 2048
+last-lba: 20971486
+sector-size: 512
+
+/dev/sda1 : start=        2048, size=        2048, type=21686148-6449-6E6F-744E-656564454649, uuid=02AC59D3-A041-6643-BEE2-70365142D3B4
+/dev/sda2 : start=        4096, size=    20967391, type=0FC63DAF-8483-4772-8E79-3D69D8477DE4, uuid=21F91553-9DDF-7449-BDA2-AFDFDF1D1177'
+mkfs.ext4 /dev/sda2
+mount /dev/sda2 /mnt
+echo 'Server = http://archlinux.ccns.ncku.edu.tw/archlinux/$repo/os/$arch
+Server = http://free.nchc.org.tw/arch/$repo/os/$arch
+Server = https://free.nchc.org.tw/arch/$repo/os/$arch
+Server = http://archlinux.cs.nctu.edu.tw/$repo/os/$arch' > /etc/pacman.d/mirrorlist
+pacstrap /mnt base linux grub networkmanager
+sed 's/^GRUB_CMDLINE_LINUX_DEFAULT.*/GRUB_CMDLINE_LINUX_DEFAULT="console=ttyS0"/g' -i /mnt/etc/default/grub
+sed 's/TIMEOUT=5/TIMEOUT=0/g' -i /mnt/etc/default/grub
+arch-chroot /mnt grub-install --target=i386-pc /dev/sda
+arch-chroot /mnt grub-mkconfig -o /boot/grub/grub.cfg
+echo "root:$ROOT_PASSWORD" | arch-chroot /mnt chpasswd
+echo "$HOSTNAME" > /mnt/etc/hostname
+echo "127.0.0.1    localhost
+::1        localhost
+127.0.1.1    $HOSTNAME.localdomain    $HOSTNAME" > /mnt/etc/hosts
+echo "en_US.UTF-8 UTF-8  
+en_GB.UTF-8 UTF-8  
+lzh_TW UTF-8" > /mnt/etc/locale.gen
+arch-chroot /mnt locale-gen
+echo "LANG=en_US.UTF-8
+LC_TIME=en_GB.UTF-8" > /mnt/etc/locale.conf
+arch-chroot /mnt systemctl enable NetworkManager
+
+echo 'Auto-Installation done, ready to reboot'
+
